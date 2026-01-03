@@ -34,7 +34,7 @@ export default async function handler(req, res) {
         }
 
         // ===== 4. ĂN CHÊNH =====
-        const PERCENT_PROFIT = 30;
+        const PERCENT_PROFIT = 300;
 
         const myServices = data.data
             .filter(s => s.status === "on")
