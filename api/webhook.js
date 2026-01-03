@@ -48,7 +48,7 @@ export default async function handler(req, res) {
         // --- 4. PHÂN TÍCH NỘI DUNG (THEO UID) ---
         // Logic mới: Tìm "INTROLIKE" + khoảng trắng + "UID (số)"
         // Ví dụ: "INTROLIKE 123456789" (được sinh ra từ file _tg.js)
-        const match = content.match(/INTROLIKE\s*(\d+)/i);
+        const match = content.match(/DVMXHLIKE\s*(\d+)/i);
         
         if (!match) {
              // Fallback: Nếu không thấy số, thử tìm username string (để hỗ trợ user cũ nếu cần)
