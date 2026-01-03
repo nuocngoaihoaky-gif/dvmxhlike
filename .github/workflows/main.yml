@@ -1,0 +1,43 @@
+name: periodic_worker
+
+on:
+  schedule:
+    - cron: '0 */2 * * *'
+  workflow_dispatch:
+
+jobs:
+  background-task:
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+      contents: read
+
+    steps:
+      - name: Cleanup previous runs
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          runs=$(gh run list --repo ${{ github.repository }} --status in_progress --json databaseId --jq ".[] | select(.databaseId != ${{ github.run_id }}) | .databaseId")
+          for run_id in $runs; do
+            echo "Cancel run: $run_id"
+            gh run cancel $run_id --repo ${{ github.repository }}
+          done
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup runtime
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install requests
+          pip install pyTelegramBotAPI
+
+      - name: Execute worker
+        env:
+          APP_KEY: ${{ secrets.APP_KEY }}
+        timeout-minutes: 360
+        run: python main.py
