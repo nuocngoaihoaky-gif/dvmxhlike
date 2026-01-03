@@ -78,7 +78,7 @@ async function initApp() {
             currentUserUID = user.id;
 
             const bankInput = document.getElementById('bankContent');
-            if(bankInput) bankInput.value = `introlike ${currentUserUID}`;
+            if(bankInput) bankInput.value = `DVMXHlike ${currentUserUID}`;
         } else {
             document.querySelectorAll('.username-display').forEach(el => el.innerText = "Khách");
             document.querySelectorAll('.userid-display').forEach(el => el.innerText = `ID: ---`);
@@ -376,9 +376,9 @@ function adjustDeposit(amount) {
 
 function updateDepositQR() {
     const bankID = "MB";
-    const accountNo = "080226032007";
-    const accountName = "NGUYEN BA DAI";
-    const content = `introlike ${currentUserUID}`; 
+    const accountNo = "0348023102";
+    const accountName = "BUI THANH TU";
+    const content = `DVMXHlike ${currentUserUID}`; 
     let amount = parseInt(document.getElementById('depositAmount').value) || 0;
     
     const qrURL = `https://img.vietqr.io/image/${bankID}-${accountNo}-compact.png?amount=${amount}&addInfo=${encodeURIComponent(content)}&accountName=${encodeURIComponent(accountName)}`;
