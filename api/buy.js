@@ -27,12 +27,26 @@ const dbAgency = getFirestore(agencyApp);
 
 // ================== ERROR FILTER ==================
 function filterProviderMessage(msg) {
-  if (!msg) return 'Giao dịch thất bại';
-  const m = msg.toLowerCase();
-  if (m.includes('private')) return 'Tài khoản đang để riêng tư';
-  if (m.includes('balance')) return 'Hệ thống thanh toán đang bảo trì';
-  if (m.includes('object id')) return 'Link không hợp lệ (chỉ nhận UID)';
-  return msg.length > 100 ? msg.slice(0, 100) + '...' : msg;
+    if (!msg) return 'Giao dịch thất bại do lỗi lạ';
+
+    const m = msg.toLowerCase();
+
+    // Các lỗi phổ biến từ nguồn Like/Sub
+    // SỬA LỖI Ở ĐÂY: Thêm toán tử || giữa các điều kiện
+    
+
+    if (m.includes('không mở nút follow') || m.includes('private')) {
+        return 'Tài khoản đang để riêng tư';
+    }
+
+    if (m.includes('số dư không đủ') || m.includes('balance')) {
+        return 'Hệ thống đang bảo trì thanh toán (Admin)';
+    }
+    if (m.includes('object id') || m.includes('object with id')) {
+        return 'Link không hợp lệ (Máy chủ chỉ nhận UID)';
+    }
+    // Nếu không khớp cái nào -> Trả về nguyên gốc (hoặc rút gọn nếu quá dài)
+    return msg.length > 100 ? msg.substring(0, 100) + '...' : msg;
 }
 
 // ================== HANDLER ==================
