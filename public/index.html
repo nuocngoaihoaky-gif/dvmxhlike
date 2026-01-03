@@ -167,15 +167,15 @@
 
             <div class="deposit-card bg-surface border border-white/5 p-6 rounded-2xl flex flex-col items-center text-center">
                 <div class="bg-white p-2 rounded-xl mb-4 qr-glow transform transition-transform hover:scale-105">
-                    <img id="qrImage" src="https://img.vietqr.io/image/MB-080226032007-compact.png" alt="QR Code" class="w-40 h-40 object-contain">
+                    <img id="qrImage" src="https://img.vietqr.io/image/MB-0348023102-compact.png" alt="QR Code" class="w-40 h-40 object-contain">
                 </div>
                 
                 <div class="w-full mb-2">
                     <label class="text-[10px] text-gray-400 uppercase font-bold mb-2 block">Nhập số tiền cần nạp (Min: 2.000đ)</label>
                     <div class="flex items-center gap-3">
-                         <button onclick="adjustDeposit(-2000)" class="w-12 h-12 rounded-xl bg-surface border border-white/10 text-gray-400 hover:text-white hover:border-secondary/50 transition active:scale-95"><i class="fa-solid fa-minus"></i></button>
-                         <input type="number" id="depositAmount" value="10000" step="2000" min="2000" oninput="updateDepositQR()" class="modern-input flex-1 py-3 rounded-xl text-center text-secondary font-bold text-xl bg-black/20 focus:ring-1 focus:ring-secondary outline-none">
-                         <button onclick="adjustDeposit(2000)" class="w-12 h-12 rounded-xl bg-surface border border-white/10 text-gray-400 hover:text-white hover:border-secondary/50 transition active:scale-95"><i class="fa-solid fa-plus"></i></button>
+                         <button onclick="adjustDeposit(-10000)" class="w-12 h-12 rounded-xl bg-surface border border-white/10 text-gray-400 hover:text-white hover:border-secondary/50 transition active:scale-95"><i class="fa-solid fa-minus"></i></button>
+                         <input type="number" id="depositAmount" value="50000" step="10000" min="1010000" oninput="updateDepositQR()" class="modern-input flex-1 py-3 rounded-xl text-center text-secondary font-bold text-xl bg-black/20 focus:ring-1 focus:ring-secondary outline-none">
+                         <button onclick="adjustDeposit(10000)" class="w-12 h-12 rounded-xl bg-surface border border-white/10 text-gray-400 hover:text-white hover:border-secondary/50 transition active:scale-95"><i class="fa-solid fa-plus"></i></button>
                     </div>
                 </div>
                 
@@ -191,8 +191,8 @@
                         <div>
                             <label class="text-[10px] text-gray-400 font-bold uppercase mb-1 block">Số tài khoản</label>
                             <div class="flex gap-2 items-center">
-                                <span class="font-mono text-xl font-bold text-white tracking-widest" id="bankAccountText">080226032007</span>
-                                <button onclick="copyTextValue('080226032007')" class="text-primary hover:text-white transition"><i class="fa-regular fa-copy"></i></button>
+                                <span class="font-mono text-xl font-bold text-white tracking-widest" id="bankAccountText">0348023102</span>
+                                <button onclick="copyTextValue('0348023102')" class="text-primary hover:text-white transition"><i class="fa-regular fa-copy"></i></button>
                             </div>
                         </div>
                         <i class="fa-brands fa-cc-visa text-3xl text-white/10"></i>
@@ -202,7 +202,7 @@
                         <div>
                             <p class="text-[9px] text-gray-500 uppercase tracking-widest mb-0.5">CHỦ TÀI KHOẢN</p>
                             <h3 class="font-brand font-bold text-lg text-yellow-500 tracking-widest uppercase drop-shadow-md">
-                                NGUYEN BA DAI
+                                BUI THANH TU
                             </h3>
                         </div>
                         <i class="fa-solid fa-circle-check text-blue-500 text-sm mb-1"></i>
