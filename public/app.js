@@ -364,8 +364,8 @@ function adjustDeposit(amount) {
     const input = document.getElementById('depositAmount');
     let val = parseInt(input.value) || 0;
     val += amount;
-    if(val < 2000) { 
-        val = 2000; 
+    if(val < 10000) { 
+        val = 10000; 
         if(tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('warning'); 
     } else { 
         if(tg.HapticFeedback) tg.HapticFeedback.impactOccurred('light'); 
