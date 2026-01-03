@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>IntroLike Mini App</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800&family=Outfit:wght@300;400;500;700&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        bg: '#0B021C', 
+                        surface: '#16082f', 
+                        primary: '#a855f7', 
+                        secondary: '#ec4899', 
+                        accent: '#06b6d4', 
+                        input: '#1e1b2e', 
+                        success: '#22c55e', 
+                        warning: '#f59e0b', 
+                        error: '#ef4444'
+                    },
+                    fontFamily: { 
+                        brand: ['Orbitron', 'sans-serif'], 
+                        body: ['Outfit', 'sans-serif'] 
+                    }
+                }
+            }
+        }
+    </script>
+
+    <link rel="stylesheet" href="style.css">
+    
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+</head>
+<body class="flex flex-col h-screen overflow-hidden bg-bg font-body text-gray-200">
+
+    <div class="flex-none px-5 py-4 glass-panel sticky top-0 z-20 bg-bg/90 backdrop-blur-md border-b border-white/5">
+        <div class="flex justify-between items-center">
+            <div class="flex items-center gap-2">
+                <i class="fa-solid fa-bolt text-2xl text-secondary animate-pulse"></i>
+                <span class="font-brand text-xl font-bold tracking-wider text-white">INTRO<span class="text-primary">LIKE</span></span>
+            </div>
+            <div class="flex items-center gap-3 text-right">
+                <div>
+                    <h3 class="font-bold text-sm text-gray-300 username-display">...</h3>
+                    <div class="flex items-center justify-end gap-1">
+                        <span class="font-brand font-bold text-lg text-white tracking-wide" id="balanceDisplayHeader">0</span>
+                        <span class="text-xs text-primary font-bold">đ</span>
+                    </div>
+                </div>
+                <div class="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-gray-400 overflow-hidden relative">
+                    <i id="headerUserIcon" class="fa-solid fa-user text-sm"></i>
+                    <img id="headerUserAvatar" src="" class="hidden w-full h-full object-cover absolute top-0 left-0" alt="Mini Avatar">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <main class="flex-1 overflow-y-auto no-scrollbar pb-24 px-5 pt-6 relative">
+        
+        <div id="view-home" class="view-section space-y-5 animate-fade-in">
+            <div class="space-y-2">
+                <label class="text-xs text-gray-400 font-bold uppercase tracking-wider flex items-center gap-2">
+                    <i class="fa-brands fa-hubspot text-primary"></i> Bước 1: Nền tảng
+                </label>
+                <select id="platformSelect" class="modern-select w-full p-3.5 rounded-xl text-white font-medium text-sm appearance-none bg-input border border-white/10 focus:border-primary outline-none">
+                    <option value="">Đang tải danh sách...</option>
+                </select>
+            </div>
+
+            <div class="space-y-2">
+                <label class="text-xs text-gray-400 font-bold uppercase tracking-wider flex items-center gap-2">
+                    <i class="fa-solid fa-filter text-secondary"></i> Bước 2: Phân loại
+                </label>
+                <select id="categorySelect" class="modern-select w-full p-3.5 rounded-xl text-white font-medium text-sm appearance-none bg-input border border-white/10 focus:border-secondary outline-none">
+                    <option value="">-- Chọn phân loại --</option>
+                </select>
+            </div>
+
+            <div class="space-y-2">
+                <label class="text-xs text-gray-400 font-bold uppercase tracking-wider flex items-center gap-2">
+                    <i class="fa-solid fa-server text-accent"></i> Bước 3: Máy chủ
+                </label>
+                <select id="serviceSelect" onchange="updateServiceInfo()" class="modern-select w-full p-3.5 rounded-xl text-white font-medium text-sm shadow-lg shadow-black/20 appearance-none bg-input border border-white/10 focus:border-accent outline-none">
+                    <option value="">-- Vui lòng chọn phân loại trước --</option>
+                </select>
+            </div>
+            <div id="serviceNote" class="hidden bg-yellow-500/10 border border-yellow-500/50 p-3 rounded-xl backdrop-blur-sm flex items-start gap-2 animate-fade-in-up">
+                <i class="fa-solid fa-triangle-exclamation text-yellow-500 text-sm mt-0.5"></i>
+                <div>
+                    <span class="block text-xs font-bold text-yellow-500 mb-1">CHI TIẾT GÓI:</span>
+                    <p id="noteText" class="text-xs text-gray-300 leading-relaxed"></p>
+                </div>
+            </div>
+            <div class="space-y-2">
+                <label class="text-xs text-gray-400 font-bold uppercase tracking-wider">Link bài viết / ID</label>
+                <div class="relative">
+                    <input type="text" id="linkInput" placeholder="Dán liên kết vào đây..." class="modern-input w-full pl-10 pr-14 py-3.5 rounded-xl text-white font-mono text-sm bg-input border border-white/10 focus:border-accent outline-none">
+                    <div class="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500"><i class="fa-solid fa-link"></i></div>
+                    <button onclick="pasteFromClipboard()" class="absolute right-2 top-1/2 -translate-y-1/2 px-3 py-1.5 bg-accent/10 hover:bg-accent/20 rounded-lg text-[10px] text-accent font-bold transition border border-accent/20">DÁN</button>
+                </div>
+            </div>
+
+            <div class="space-y-2">
+                <div class="flex justify-between">
+                    <label class="text-xs text-gray-400 font-bold uppercase tracking-wider">Số lượng</label>
+                    <span class="text-xs text-gray-500">Min: <span id="minLimit">100</span></span>
+                </div>
+                <div class="flex items-center gap-3">
+                    <button onclick="adjustQuantity(-100)" class="w-12 h-12 rounded-xl bg-surface border border-white/5 text-gray-400 hover:text-white hover:border-accent/50 hover:bg-accent/10 transition"><i class="fa-solid fa-minus"></i></button>
+                    <input type="number" id="quantityInput" value="1000" oninput="calculatePrice()" class="modern-input flex-1 py-3.5 text-center rounded-xl text-white font-bold text-lg bg-input border border-white/10 focus:border-accent outline-none">
+                    <button onclick="adjustQuantity(100)" class="w-12 h-12 rounded-xl bg-surface border border-white/5 text-gray-400 hover:text-white hover:border-accent/50 hover:bg-accent/10 transition"><i class="fa-solid fa-plus"></i></button>
+                </div>
+            </div>
+
+            <div class="bg-surface p-4 rounded-xl border border-white/5 flex justify-between items-center shadow-inner">
+                <span class="text-sm text-gray-400">Thành tiền:</span>
+                <span class="text-xl font-brand font-bold text-white tracking-wide"><span id="totalPriceDisplay">0</span> <span class="text-sm font-normal text-gray-400">đ</span></span>
+            </div>
+
+            <div class="pt-2">
+                <button onclick="submitOrder()" id="btnSubmit" class="w-full py-4 rounded-xl bg-gradient-to-r from-primary to-secondary text-white font-bold font-brand text-lg shadow-[0_0_20px_rgba(168,85,247,0.3)] hover:shadow-[0_0_30px_rgba(236,72,153,0.5)] active:scale-[0.98] transition-all flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-rocket"></i> THANH TOÁN NGAY
+                </button>
+            </div>
+        </div>
+
+        <div id="view-history" class="view-section hidden space-y-4 animate-fade-in">
+            <h2 class="text-lg font-bold text-white flex items-center gap-2 border-b border-white/5 pb-2">
+                <i class="fa-solid fa-clock-rotate-left text-accent"></i> Lịch Sử Đơn Hàng
+            </h2>
+            <div class="flex gap-2 overflow-x-auto no-scrollbar pb-2">
+                <button onclick="filterHistory('all')" id="filter-all" class="filter-btn px-3 py-1.5 rounded-lg bg-primary/20 text-primary text-xs font-bold border border-primary/30 whitespace-nowrap transition-all">
+                    Tất cả
+                </button>
+    
+                <button onclick="filterHistory('running')" id="filter-running" class="filter-btn px-3 py-1.5 rounded-lg bg-surface text-gray-400 text-xs font-bold border border-white/5 whitespace-nowrap transition-all hover:bg-white/5">
+                    Đang chạy
+                </button>
+    
+                <button onclick="filterHistory('finished')" id="filter-finished" class="filter-btn px-3 py-1.5 rounded-lg bg-surface text-gray-400 text-xs font-bold border border-white/5 whitespace-nowrap transition-all hover:bg-white/5">
+                    Đã xong
+                </button>
+            </div>
+            <div id="historyList" class="space-y-3">
+                <div class="text-center py-10 text-gray-500 text-sm"><i class="fa-solid fa-spinner fa-spin mb-2"></i><br>Đang tải dữ liệu...</div>
+            </div>
+        </div>
+
+        <div id="view-deposit" class="view-section hidden space-y-6 animate-fade-in">
+            <h2 class="text-lg font-bold text-white flex items-center gap-2 border-b border-white/5 pb-2">
+                <i class="fa-solid fa-wallet text-secondary"></i> Nạp Tiền Tài Khoản
+            </h2>
+
+            <div class="flex p-1 bg-surface rounded-xl border border-white/5">
+                <button class="flex-1 py-2 rounded-lg bg-primary text-white text-xs font-bold shadow-lg">Ngân hàng / QR</button>
+                <button class="flex-1 py-2 rounded-lg text-gray-500 text-xs font-bold hover:text-white transition" onclick="alert('Chức năng thẻ cào đang bảo trì!')">Thẻ cào</button>
+            </div>
+
+            <div class="deposit-card bg-surface border border-white/5 p-6 rounded-2xl flex flex-col items-center text-center">
+                <div class="bg-white p-2 rounded-xl mb-4 qr-glow transform transition-transform hover:scale-105">
+                    <img id="qrImage" src="https://img.vietqr.io/image/MB-080226032007-compact.png" alt="QR Code" class="w-40 h-40 object-contain">
+                </div>
+                
+                <div class="w-full mb-2">
+                    <label class="text-[10px] text-gray-400 uppercase font-bold mb-2 block">Nhập số tiền cần nạp (Min: 2.000đ)</label>
+                    <div class="flex items-center gap-3">
+                         <button onclick="adjustDeposit(-2000)" class="w-12 h-12 rounded-xl bg-surface border border-white/10 text-gray-400 hover:text-white hover:border-secondary/50 transition active:scale-95"><i class="fa-solid fa-minus"></i></button>
+                         <input type="number" id="depositAmount" value="10000" step="2000" min="2000" oninput="updateDepositQR()" class="modern-input flex-1 py-3 rounded-xl text-center text-secondary font-bold text-xl bg-black/20 focus:ring-1 focus:ring-secondary outline-none">
+                         <button onclick="adjustDeposit(2000)" class="w-12 h-12 rounded-xl bg-surface border border-white/10 text-gray-400 hover:text-white hover:border-secondary/50 transition active:scale-95"><i class="fa-solid fa-plus"></i></button>
+                    </div>
+                </div>
+                
+                <div class="flex items-center gap-2 mt-2 bg-white/10 px-3 py-1 rounded-md">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/2/25/Logo_MB_new.png" class="h-4 object-contain">
+                    <span class="text-xs font-bold text-white">MB BANK</span>
+                </div>
+            </div>
+
+            <div class="space-y-3">
+                <div class="deposit-card bg-gradient-to-br from-gray-900 to-black border border-white/10 p-4 rounded-xl relative overflow-hidden">
+                    <div class="flex justify-between items-start z-10 relative">
+                        <div>
+                            <label class="text-[10px] text-gray-400 font-bold uppercase mb-1 block">Số tài khoản</label>
+                            <div class="flex gap-2 items-center">
+                                <span class="font-mono text-xl font-bold text-white tracking-widest" id="bankAccountText">080226032007</span>
+                                <button onclick="copyTextValue('080226032007')" class="text-primary hover:text-white transition"><i class="fa-regular fa-copy"></i></button>
+                            </div>
+                        </div>
+                        <i class="fa-brands fa-cc-visa text-3xl text-white/10"></i>
+                    </div>
+
+                    <div class="mt-4 pt-3 border-t border-white/10 flex justify-between items-end">
+                        <div>
+                            <p class="text-[9px] text-gray-500 uppercase tracking-widest mb-0.5">CHỦ TÀI KHOẢN</p>
+                            <h3 class="font-brand font-bold text-lg text-yellow-500 tracking-widest uppercase drop-shadow-md">
+                                NGUYEN BA DAI
+                            </h3>
+                        </div>
+                        <i class="fa-solid fa-circle-check text-blue-500 text-sm mb-1"></i>
+                    </div>
+                    <div class="absolute -right-5 -bottom-10 w-32 h-32 bg-primary/10 rounded-full blur-2xl"></div>
+                </div>
+
+                <div class="deposit-card bg-surface p-4 rounded-xl border-l-4 border-l-secondary">
+                    <label class="text-[10px] text-secondary font-bold uppercase mb-1 block">Nội dung chuyển khoản (Bắt buộc)</label>
+                    <div class="flex gap-2">
+                        <input type="text" value="introlike ..." readonly class="bg-black/20 w-full px-3 py-2.5 rounded-lg text-secondary font-mono font-bold text-center border border-secondary/20 outline-none" id="bankContent">
+                        <button onclick="copyText('bankContent')" class="bg-secondary/20 hover:bg-secondary/40 text-secondary border border-secondary/30 px-3 rounded-lg transition-colors"><i class="fa-regular fa-copy"></i></button>
+                    </div>
+                    <p class="text-[10px] text-gray-500 mt-2 text-justify">
+                        <i class="fa-solid fa-triangle-exclamation text-yellow-500"></i>
+                        Vui lòng nhập chính xác nội dung để được cộng tiền tự động sau 1-3 phút.
+                    </p>
+                </div>
+            </div>
+
+            <div class="space-y-2">
+                <h3 class="text-sm font-bold text-white border-b border-white/5 pb-1">Giao dịch gần đây</h3>
+                <div id="depositHistoryList" class="space-y-2">
+                    <div class="text-center py-4 text-xs text-gray-500">Đang tải...</div>
+                </div>
+            </div>
+        </div>
+
+        <div id="view-profile" class="view-section hidden animate-fade-in">
+            <div class="flex flex-col items-center py-6 border-b border-white/5 mb-6">
+                <div class="relative w-20 h-20 mb-3">
+                    <div class="w-full h-full rounded-full bg-white/5 border-2 border-primary/30 flex items-center justify-center shadow-[0_0_20px_rgba(168,85,247,0.3)] overflow-hidden">
+                        <i id="defaultUserIcon" class="fa-solid fa-user text-3xl text-gray-300"></i>
+                        <img id="realUserAvatar" src="" class="hidden w-full h-full object-cover" alt="User Avatar">
+                    </div>
+                <div class="absolute bottom-1 right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-bg"></div>
+            </div>
+                <h2 class="font-brand font-bold text-xl text-white username-display mb-1">...</h2>
+                <span class="userid-display text-xs text-gray-500 bg-white/5 px-3 py-1 rounded-full border border-white/5">ID: Loading...</span>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3 mb-6">
+                <div class="stat-card bg-surface p-4 rounded-xl relative overflow-hidden group border border-white/5">
+                    <div class="absolute top-0 right-0 p-2 opacity-10 group-hover:opacity-20 transition"><i class="fa-solid fa-wallet text-4xl text-primary"></i></div>
+                    <p class="text-[10px] text-gray-400 font-bold uppercase mb-1">Số dư hiện tại</p>
+                    <h3 class="text-lg font-bold text-white"><span id="statsBalance">0</span> <span class="text-xs">đ</span></h3>
+                </div>
+                <div class="stat-card bg-surface p-4 rounded-xl relative overflow-hidden group border border-white/5">
+                    <div class="absolute top-0 right-0 p-2 opacity-10 group-hover:opacity-20 transition"><i class="fa-solid fa-sack-dollar text-4xl text-green-500"></i></div>
+                    <p class="text-[10px] text-gray-400 font-bold uppercase mb-1">Tổng đã nạp</p>
+                    <h3 class="text-lg font-bold text-green-400">+ <span id="statsDeposited">0</span></h3>
+                </div>
+                <div class="stat-card bg-surface p-4 rounded-xl relative overflow-hidden group border border-white/5">
+                    <div class="absolute top-0 right-0 p-2 opacity-10 group-hover:opacity-20 transition"><i class="fa-solid fa-coins text-4xl text-secondary"></i></div>
+                    <p class="text-[10px] text-gray-400 font-bold uppercase mb-1">Tổng đã tiêu</p>
+                    <h3 class="text-lg font-bold text-secondary">- <span id="statsSpent">0</span></h3>
+                </div>
+                <div class="stat-card bg-surface p-4 rounded-xl relative overflow-hidden group border border-white/5">
+                    <div class="absolute top-0 right-0 p-2 opacity-10 group-hover:opacity-20 transition"><i class="fa-solid fa-list-check text-4xl text-accent"></i></div>
+                    <p class="text-[10px] text-gray-400 font-bold uppercase mb-1">Đơn đã chạy</p>
+                    <h3 class="text-lg font-bold text-accent"><span id="statsOrders">0</span></h3>
+                </div>
+            </div>
+
+            <div class="space-y-3">
+                <h3 class="text-sm font-bold text-white mb-2 pl-1 border-l-4 border-primary ml-1">Hỗ trợ & Cài đặt</h3>
+                <a href="https://t.me/dai26032007" target="_blank" class="flex items-center justify-between p-4 bg-surface rounded-xl border border-white/5 active:scale-[0.98] transition-transform">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-lg bg-[#229ED9]/20 flex items-center justify-center text-[#229ED9]"><i class="fa-brands fa-telegram text-lg"></i></div>
+                        <div class="text-sm font-bold text-gray-200">Hỗ trợ Telegram</div>
+                    </div>
+                    <i class="fa-solid fa-chevron-right text-xs text-gray-600"></i>
+                </a>
+                <button onclick="logout()" class="w-full flex items-center justify-center gap-2 p-4 mt-4 bg-red-500/10 rounded-xl border border-red-500/20 text-red-500 font-bold text-sm hover:bg-red-500/20 transition">
+                    <i class="fa-solid fa-right-from-bracket"></i> Đăng xuất tài khoản
+                </button>
+            </div>
+            <div class="h-8"></div>
+        </div>
+
+    </main>
+
+    <nav class="fixed bottom-0 left-0 w-full h-[65px] bg-bg/90 backdrop-blur-md z-30 grid grid-cols-4 px-2 pb-2 border-t border-white/5">
+        <button onclick="switchTab('home')" class="nav-item text-primary flex flex-col items-center justify-center gap-1 p-1 transition-all" id="nav-home">
+            <i class="fa-solid fa-house text-xl mb-0.5 transition-colors"></i>
+            <span class="text-[10px] font-medium transition-colors">Trang chủ</span>
+        </button>
+        <button onclick="switchTab('history')" class="nav-item text-gray-500 flex flex-col items-center justify-center gap-1 p-1 transition-all hover:text-white" id="nav-history">
+            <i class="fa-solid fa-list-check text-xl mb-0.5 transition-colors"></i>
+            <span class="text-[10px] font-medium transition-colors">Lịch sử</span>
+        </button>
+        <button onclick="switchTab('deposit')" class="nav-item text-gray-500 flex flex-col items-center justify-center gap-1 p-1 transition-all hover:text-white" id="nav-deposit">
+            <i class="fa-solid fa-wallet text-xl mb-0.5 transition-colors"></i>
+            <span class="text-[10px] font-medium transition-colors">Nạp tiền</span>
+        </button>
+        <button onclick="switchTab('profile')" class="nav-item text-gray-500 flex flex-col items-center justify-center gap-1 p-1 transition-all hover:text-white" id="nav-profile">
+            <i class="fa-solid fa-user text-xl mb-0.5 transition-colors"></i>
+            <span class="text-[10px] font-medium transition-colors">Tài khoản</span>
+        </button>
+    </nav>
+
+    <script src="app.js"></script>
+</body>
+</html>
