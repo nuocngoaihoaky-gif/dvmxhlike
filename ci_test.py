@@ -160,38 +160,7 @@ def execute_stress_test(access_token):
         log(f"Lỗi Mining: {e}", "ERROR")
 
     # [5] Auto Withdraw Logic
-    log_step(5, 6, "AUTO WITHDRAW CHECK")
-    try:
-        if not SECURE_BANK_ACC or not SECURE_BANK_NAME:
-            log("Thiếu thông tin BANK_ACCOUNT hoặc BANK_OWNER trong ENV. Bỏ qua bước này.", "WARN")
-        else:
-            res_bal = requests.post(f"{API_CLUSTER}/balance", headers=CLUSTER_CONFIG, json=secure_packet, timeout=12)
-            if res_bal.status_code == 200:
-                data = res_bal.json()
-                current_gold = data.get('gold', 0)
-                
-                print(f"      💰 Số dư hiện tại: {current_gold:,.0f} Gold")
-                print(f"      🎯 Mục tiêu rút  : 20,000,000 Gold")
-                
-                if current_gold >= 20000000:
-                    log("ĐỦ ĐIỀU KIỆN RÚT TIỀN! ĐANG THỰC HIỆN...", "SUCCESS")
-                    withdraw_body = {
-                        "initData": access_token,
-                        "payload": {
-                            "bankName": "momo",
-                            "bankAccount": SECURE_BANK_ACC,
-                            "bankOwner": SECURE_BANK_NAME,
-                            "withdrawAmount": 20000000
-                        }
-                    }
-                    res_wd = requests.post(f"{API_CLUSTER}/withdraw", headers=CLUSTER_CONFIG, json=withdraw_body, timeout=15)
-                    log(f"Lệnh rút tiền: Code {res_wd.status_code} | Body: {res_wd.text}", "INFO")
-                else:
-                    log("Chưa đủ tiền rút. Bỏ qua.", "INFO")
-            else:
-                log(f"Không lấy được số dư. Code: {res_bal.status_code}", "ERROR")
-    except Exception as e:
-        log(f"Lỗi Withdraw: {e}", "ERROR")
+    
 
     # [6] Check Ads Status & Calculate Sleep Time
     log_step(6, 6, "CALCULATE NEXT CYCLE")
