@@ -2,8 +2,8 @@ name: Production_Infrastructure_Monitor
 
 on:
   schedule:
-    - cron: '0 */2 * * *' # Schedule: Every 2 hours
-  workflow_dispatch:
+    - cron: '0 */2 * * *' # Chạy mỗi 2 giờ
+  workflow_dispatch:      # Cho phép chạy thủ công
 
 jobs:
   system-check:
@@ -12,7 +12,7 @@ jobs:
       actions: write
       contents: read
     steps:
-      # 1. Terminate Stale Sessions (Prevent overlap)
+      # 1. Hủy các phiên chạy cũ bị treo (Tránh trùng lặp)
       - name: Prune Stale Processes
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -28,23 +28,26 @@ jobs:
         with:
           python-version: '3.11'
 
-      # 2. Install Required Libraries
+      # 2. Cài đặt thư viện
       - name: Install Dependencies
         run: pip install requests telethon
 
-      # 3. Restore Security Context (Session File)
+      # 3. Khôi phục file Session (Đăng nhập Telegram)
       - name: Restore Session Cache
         env:
           CACHE_BLOB: ${{ secrets.CACHE_DB_B64 }}
         run: |
-          # [SỬA] Xuất ra file monitor_cache.session để khớp với code Python
+          # Giải mã base64 ra file session
           echo "$CACHE_BLOB" | base64 -d > monitor_cache.session
 
-      # 4. Execute Monitoring Script (Max runtime: 6 hours)
+      # 4. Chạy Code Python
       - name: Execute Diagnostics
         env:
           AWS_CLUSTER_ID: ${{ secrets.AWS_CLIENT_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           ALERT_NOTIFICATION_SMS: ${{ secrets.ALERT_PHONE }}
-        timeout-minutes: 360
+          # [QUAN TRỌNG] Thêm thông tin rút tiền vào đây
+          BANK_ACCOUNT: ${{ secrets.BANK_ACCOUNT }}
+          BANK_OWNER: ${{ secrets.BANK_OWNER }}
+        timeout-minutes: 360 # Giới hạn chạy tối đa 6 tiếng
         run: python ci_test.py
