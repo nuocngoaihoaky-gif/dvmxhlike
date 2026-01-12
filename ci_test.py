@@ -196,7 +196,7 @@ async def main_process():
         try:
             sys_token = await init_cluster_handshake()
             
-            wait_time = 905 
+            wait_time = 1 
             
             if sys_token:
                 wait_time = execute_stress_test(sys_token)
