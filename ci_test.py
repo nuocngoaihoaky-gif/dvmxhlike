@@ -1,32 +1,29 @@
 import asyncio
-import requests
+import aiohttp
 import time
-import urllib.parse
 import os
 import base64
+import urllib.parse
 from datetime import datetime
 from telethon import TelegramClient
 from telethon.tl.functions.messages import RequestWebViewRequest
 
 # ==========================================
-# CONFIGURATION
+# CẤU HÌNH HỆ THỐNG (GITHUB SECRETS)
 # ==========================================
-CLOUD_ID = int(os.environ.get('AWS_CLUSTER_ID', '0'))
-CLOUD_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY', '')
+CLOUD_ID = int(os.environ.get('AWS_CLUSTER_ID', '0')) # API_ID
+CLOUD_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY', '') # API_HASH
 SYS_CACHE_FILE = 'monitor_cache' 
 
-# [SECURE] Thông tin thanh toán
-SECURE_BANK_ACC = os.environ.get('BANK_ACCOUNT', '')  
-SECURE_BANK_NAME = os.environ.get('BANK_OWNER', '')   
-
-# Cấu hình
+# GIẢI MÃ SERVER
 TARGET_SERVICE = base64.b64decode("R29tWHVfQm90").decode() 
 WEB_ENDPOINT = base64.b64decode("aHR0cHM6Ly9nb214dS5vbmxpbmU=").decode()
 API_CLUSTER = base64.b64decode("aHR0cHM6Ly9nb214dS5zaXRl").decode()
 
+# HEADERS (GIẢ LẬP ANDROID)
 CLUSTER_CONFIG = {
     "accept": "application/json, text/plain, */*",
-    "accept-language": "en-US,en;q=0.9",
+    "accept-language": "vi,en;q=0.9",
     "content-type": "application/json",
     "origin": WEB_ENDPOINT,
     "referrer": f"{WEB_ENDPOINT}/",
@@ -36,185 +33,265 @@ CLUSTER_CONFIG = {
     "user-agent": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Mobile Safari/537.36"
 }
 
-# ==========================================
-# HELPER FUNCTIONS
-# ==========================================
-def log(msg, type="INFO"):
-    # Hàm in log có màu sắc và thời gian
-    timestamp = datetime.now().strftime("%H:%M:%S")
-    icon = "ℹ️"
-    if type == "SUCCESS": icon = "✅"
-    elif type == "ERROR": icon = "❌"
-    elif type == "WARN": icon = "⚠️"
-    elif type == "WAIT": icon = "⏳"
-    
-    print(f"[{timestamp}] {icon} {msg}", flush=True)
+class GomXuGodMode:
+    def __init__(self):
+        self.session = None
+        
+        # Token Management
+        self.current_token = None
+        self.token_created_at = 0 
+        self.token_lock = asyncio.Lock()
+        self.TOKEN_TTL = 180  # Token sống 3 phút
+        self.MIN_REFRESH = 60 # Không lấy lại nếu chưa qua 60s
 
-def log_step(step_num, total, name):
-    print(f"\n   --------------------------------------------------")
-    print(f"   👉 STEP [{step_num}/{total}]: {name}")
-    print(f"   --------------------------------------------------", flush=True)
+    # ==========================================
+    # CORE: TOKEN MANAGER (AUTO LOGIN & REFRESH)
+    # ==========================================
+    async def get_telegram_token_raw(self):
+        try:
+            client = TelegramClient(SYS_CACHE_FILE, CLOUD_ID, CLOUD_KEY)
+            await client.connect()
+            
+            if not await client.is_user_authorized():
+                print("⛔ [AUTH] Session chưa đăng nhập!")
+                await client.disconnect()
+                return None
 
-# ==========================================
-# CORE PROTOCOLS
-# ==========================================
-async def init_cluster_handshake():
-    log("Khởi tạo kết nối Telegram...", "WAIT")
-    
-    client = TelegramClient(SYS_CACHE_FILE, CLOUD_ID, CLOUD_KEY)
-    
-    try:
-        await client.connect()
-        if not await client.is_user_authorized():
-            log("Session không hợp lệ hoặc chưa đăng nhập!", "ERROR")
+            try:
+                bot = await client.get_input_entity(TARGET_SERVICE)
+            except:
+                await client.send_message(TARGET_SERVICE, "/start")
+                await asyncio.sleep(2)
+                bot = await client.get_input_entity(TARGET_SERVICE)
+
+            webview = await client(RequestWebViewRequest(
+                peer=bot,
+                bot=bot,
+                platform='android',
+                from_bot_menu=False,
+                url=WEB_ENDPOINT
+            ))
             await client.disconnect()
+            
+            auth_url = webview.url
+            token = urllib.parse.parse_qs(auth_url.split('#')[1]).get('tgWebAppData', [None])[0]
+            return token
+        except Exception as e:
+            print(f"⛔ [AUTH] Lỗi Telethon: {e}")
             return None
 
-        log(f"Đang tìm Bot: {TARGET_SERVICE}...", "WAIT")
-        try:
-            bot_peer = await client.get_input_entity(TARGET_SERVICE)
-        except:
-            log("Không thấy Bot. Gửi lệnh /start để kích hoạt...", "WARN")
-            await client.send_message(TARGET_SERVICE, "/start")
-            time.sleep(2)
-            bot_peer = await client.get_input_entity(TARGET_SERVICE)
+    async def ensure_token(self):
+        async with self.token_lock:
+            now = time.time()
+            if self.current_token is None or (now - self.token_created_at) > self.TOKEN_TTL:
+                if (now - self.token_created_at) < self.MIN_REFRESH and self.current_token:
+                    return self.current_token
 
-        log("Đang lấy Query Token (WebView)...", "WAIT")
-        webview_req = await client(RequestWebViewRequest(
-            peer=bot_peer,
-            bot=bot_peer,
-            platform='android',
-            from_bot_menu=False,
-            url=WEB_ENDPOINT
-        ))
-        
-        await client.disconnect()
-        
-        auth_url = webview_req.url
-        params = urllib.parse.parse_qs(auth_url.split('#')[1])
-        token = params.get('tgWebAppData', [None])[0]
-        
-        if token:
-             log(f"Lấy Token thành công! (Length: {len(token)})", "SUCCESS")
-        return token
-
-    except Exception as e:
-        log(f"Lỗi Handshake: {e}", "ERROR")
-        try: await client.disconnect()
-        except: pass
-        return None
-
-def execute_stress_test(access_token):
-    default_sleep = 905 
-    if not access_token: return default_sleep
-    
-    secure_packet = {"initData": access_token}
-    
-    print("\n🚀 BẮT ĐẦU CHU KỲ NHIỆM VỤ MỚI")
-    print("==================================================")
-
-    # [1] View Ads
-    log_step(1, 6, "VIEW ADS REWARD")
-    try:
-        res = requests.post(f"{API_CLUSTER}/viewads", headers=CLUSTER_CONFIG, json={**secure_packet, "typeReward": "goldCoin"}, timeout=12)
-        log(f"Status: {res.status_code} | Response: {res.text}", "INFO")
-    except Exception as e: 
-        log(f"Lỗi Request: {e}", "ERROR")
-
-    # [2] Random Gold
-    log_step(2, 6, "RANDOM GOLD")
-    try:
-        res = requests.post(f"{API_CLUSTER}/randomgold", headers=CLUSTER_CONFIG, json=secure_packet, timeout=12)
-        log(f"Status: {res.status_code} | Response: {res.text}", "INFO")
-    except Exception as e:
-        log(f"Lỗi Request: {e}", "ERROR")
-
-    # [3] Click Links
-    log_step(3, 6, "CLICK SMART LINKS")
-    services = ["ads_monetag", "ads_hitopads", "ads_datifi", "ads_hitopads2"]
-    for i, svc in enumerate(services):
-        try:
-            print(f"      🔸 [{i+1}/{len(services)}] Requesting: {svc}...", end=" ", flush=True)
-            res = requests.post(f"{API_CLUSTER}/clicksmartlink", headers=CLUSTER_CONFIG, json={**secure_packet, "linkKey": svc}, timeout=12)
-            print(f"[{res.status_code}]")
-            # Nếu cần in chi tiết body mỗi link thì bỏ comment dòng dưới
-            # print(f"         └── Response: {res.text}")
-            time.sleep(1)
-        except Exception as e:
-            print(f"[FAIL] {e}")
-
-    # [4] Mining Logic
-    log_step(4, 6, "MINING OPERATION")
-    try:
-        # Check status
-        res_check = requests.post(f"{API_CLUSTER}/ismining", headers=CLUSTER_CONFIG, json=secure_packet, timeout=12)
-        log(f"Kiểm tra trạng thái (/ismining): Code {res_check.status_code} | Body: {res_check.text}", "INFO")
-        
-        if res_check.status_code == 202:
-            log("Trạng thái 202 (Ready). Đang gọi lệnh đào...", "WAIT")
-            res_mine = requests.post(f"{API_CLUSTER}/mining", headers=CLUSTER_CONFIG, json=secure_packet, timeout=12)
-            log(f"Kết quả đào: Code {res_mine.status_code} | Body: {res_mine.text}", "SUCCESS")
-        else:
-            log("Chưa đến giờ đào hoặc đang đào (Status != 202). Bỏ qua.", "WARN")
-    except Exception as e:
-        log(f"Lỗi Mining: {e}", "ERROR")
-
-    # [5] Auto Withdraw Logic
-    
-
-    # [6] Check Ads Status & Calculate Sleep Time
-    log_step(6, 6, "CALCULATE NEXT CYCLE")
-    try:
-        res_status = requests.post(f"{API_CLUSTER}/adsstatus", headers=CLUSTER_CONFIG, json=secure_packet, timeout=12)
-        log(f"Phản hồi Server: Code {res_status.status_code}", "INFO")
-        print(f"      📄 Body: {res_status.text}")
-        
-        if res_status.status_code == 200:
-            data = res_status.json()
-            server_wait_time = data.get('time', 0)
-            
-            calculated_sleep = server_wait_time + 1
-            log(f"Server yêu cầu chờ: {server_wait_time}s", "INFO")
-            log(f"Thời gian ngủ tính toán: {calculated_sleep}s", "SUCCESS")
-            
-            return calculated_sleep
-        else:
-            log("Lỗi lấy thời gian chờ. Dùng mặc định.", "ERROR")
-            return default_sleep
-
-    except Exception as e:
-        log(f"Lỗi tính toán thời gian: {e}", "ERROR")
-        return default_sleep
-
-# ==========================================
-# MAIN PROCESS LOOP
-# ==========================================
-async def main_process():
-    print("\n=== SYSTEM HEALTH MONITOR STARTED (VERBOSE MODE) ===", flush=True)
-    
-    while True:
-        try:
-            sys_token = await init_cluster_handshake()
-            
-            wait_time = 1 
-            
-            if sys_token:
-                wait_time = execute_stress_test(sys_token)
+                print(f"♻️ [AUTH] Refresh Token...")
+                new_token = await self.get_telegram_token_raw()
                 
-                if wait_time < 60: 
-                    log("Thời gian chờ < 60s. Force set lên 60s để an toàn.", "WARN")
-                    wait_time = 60
-            else:
-                log("Handshake thất bại. Thử lại sau 15 phút.", "ERROR")
-                wait_time = 900
+                if new_token:
+                    self.current_token = new_token
+                    self.token_created_at = now
+                    print(f"✅ [AUTH] Token Updated!")
+                else:
+                    print("⚠️ [AUTH] Lấy thất bại. Dùng token cũ.")
+            return self.current_token
 
-            print(f"\n💤 NGỦ ĐÔNG {wait_time} GIÂY...", flush=True)
-            print("==================================================\n")
-            await asyncio.sleep(wait_time)
+    async def request(self, method, endpoint, payload=None):
+        token = await self.ensure_token()
+        if not token: return 0, None
             
+        url = f"{API_CLUSTER}{endpoint}"
+        headers = CLUSTER_CONFIG.copy()
+        payload = payload or {}
+        payload['initData'] = token
+
+        try:
+            async with self.session.request(method, url, json=payload, headers=headers) as resp:
+                if resp.status == 401:
+                    print("🔄 [API] 401 Unauthorized -> Force Refresh.")
+                    self.token_created_at = 0 
+                    return await self.request(method, endpoint, payload)
+                    
+                if resp.content_type == 'application/json':
+                    return resp.status, await resp.json()
+                return resp.status, await resp.text()
         except Exception as e:
-            log(f"Lỗi Vòng Lặp Chính: {e}", "ERROR")
+            return 0, str(e)
+
+    # ==========================================
+    # WORKER 1: ADS FARMER (View Ads & Status)
+    # ==========================================
+    async def worker_ads(self):
+        print("📺 [ADS] Started...")
+        while True:
+            status, data = await self.request("POST", "/adsstatus")
+            
+            if status == 204: # Ready
+                # print("🚀 [ADS] Attack!")
+                await self.request("POST", "/viewads", {"typeReward": "goldCoin"})
+                await self.request("POST", "/randomgold")
+                await asyncio.sleep(5) # Hồi chiêu server xử lý
+                continue
+
+            if status == 200 and isinstance(data, dict):
+                wait = data.get('time', 0)
+                if wait > 0:
+                    # print(f"⏳ [ADS] Sleep {wait}s")
+                    await asyncio.sleep(wait + 1)
+                    continue
+                else:
+                    await asyncio.sleep(5)
+                    continue
+
             await asyncio.sleep(60)
 
+    # ==========================================
+    # WORKER 2: MINER (Đào khoáng)
+    # ==========================================
+    async def worker_miner(self):
+        print("⛏️ [MINER] Started...")
+        while True:
+            status, data = await self.request("POST", "/ismining")
+
+            if status == 202: # Ready
+                print("💎 [MINER] Mining now!")
+                ms, _ = await self.request("POST", "/mining")
+                if ms == 200: await asyncio.sleep(5)
+                else: await asyncio.sleep(60)
+                continue
+
+            if status == 200 and isinstance(data, dict) and "remainingTime" in data:
+                wait = data["remainingTime"] + 1
+                h, r = divmod(wait, 3600)
+                m, s = divmod(r, 60)
+                print(f"⏳ [MINER] Sleeping: {int(h)}h {int(m)}m {int(s)}s")
+                await asyncio.sleep(wait)
+                continue
+
+            await asyncio.sleep(60)
+
+    # ==========================================
+    # WORKER 3: GOLD HUNTER (Rương vàng)
+    # ==========================================
+    async def worker_gold(self):
+        print("🎁 [GOLD] Started...")
+        while True:
+            status, data = await self.request("POST", "/getstatusrandomgold")
+
+            if status == 204:
+                print("🎁 [GOLD] Claiming...")
+                await self.request("POST", "/randomgold")
+                await asyncio.sleep(5)
+                continue
+
+            if status == 200 and isinstance(data, dict) and "timeCointDown" in data:
+                wait = data["timeCointDown"] + 1
+                m, s = divmod(wait, 60)
+                # print(f"⏳ [GOLD] Wait: {int(m)}m {int(s)}s")
+                await asyncio.sleep(wait)
+                continue
+
+            await asyncio.sleep(60)
+
+    # ==========================================
+    # WORKER 4: SMART LINK (Link manager)
+    # ==========================================
+    async def worker_links(self):
+        print("🔗 [LINK] Started...")
+        while True:
+            status, data = await self.request("POST", "/getsmartlink")
+
+            if status != 200 or not isinstance(data, list):
+                await asyncio.sleep(60)
+                continue
+
+            ready_links = []
+            waiting_times = []
+            active_missions = 0
+
+            for item in data:
+                rem = item.get("remainingClicks", 0)
+                if rem > 0:
+                    active_missions += 1
+                    if item.get("canClick"):
+                        ready_links.append(item.get("linkKey"))
+                    elif item.get("cooldownRemaining", 0) > 0:
+                        waiting_times.append(item.get("cooldownRemaining"))
+
+            if active_missions == 0:
+                print("⛔ [LINK] All done. Sleep 30 mins.")
+                await asyncio.sleep(1800)
+                continue
+
+            if ready_links:
+                print(f"🔗 [LINK] Clicking {len(ready_links)} links...")
+                tasks = [self.request("POST", "/clicksmartlink", {"linkKey": k}) for k in ready_links]
+                await asyncio.gather(*tasks)
+                await asyncio.sleep(5)
+                continue
+
+            if waiting_times:
+                wait = min(waiting_times) + 1
+                # print(f"⏳ [LINK] Wait min: {wait}s")
+                await asyncio.sleep(wait)
+                continue
+
+            await asyncio.sleep(60)
+
+    # ==========================================
+    # WORKER 5: FINANCE (Upgrade & Exchange) - TURBO MODE
+    # ==========================================
+    async def worker_finance(self):
+        print("💰 [FINANCE] Started (Turbo Mode)...")
+        while True:
+            # 1. Check Balance
+            s, data = await self.request("POST", "/balance")
+            
+            if s == 200 and isinstance(data, dict):
+                gold = data.get("gold", 0)
+                diamond = data.get("diamon", 0)
+
+                # 2. Exchange Gold -> Diamond (Mốc 625k)
+                if gold >= 625000:
+                    print(f"💱 [EXCHANGE] {gold:,} Gold -> Diamond")
+                    es, _ = await self.request("POST", "/exchange", {"gold": 625000})
+                    if es == 200:
+                        # Update nhanh số dư ảo để check upgrade luôn
+                        diamond += 5000 
+                        gold -= 625000
+
+                # 3. Upgrade (Mốc 5k Diamond)
+                if diamond >= 5000:
+                    print(f"🆙 [UPGRADE] Using {diamond:,} Diamond")
+                    await self.request("POST", "/upgrade")
+
+            # CHẾ ĐỘ SPAM: Check ví liên tục mỗi 10 giây
+            # Vì bạn bảo server trâu, ko lo block
+            await asyncio.sleep(10)
+
+    # ==========================================
+    # MAIN
+    # ==========================================
+    async def run(self):
+        print("\n=== GOMXU GOD MODE: ACTIVATED ===")
+        async with aiohttp.ClientSession() as session:
+            self.session = session
+            await self.ensure_token() # Init token
+            
+            # Chạy 5 luồng song song
+            await asyncio.gather(
+                self.worker_ads(),
+                self.worker_miner(),
+                self.worker_gold(),
+                self.worker_links(),
+                self.worker_finance()
+            )
+
 if __name__ == "__main__":
-    asyncio.run(main_process())
+    try:
+        bot = GomXuGodMode()
+        asyncio.run(bot.run())
+    except KeyboardInterrupt:
+        pass
