@@ -2,7 +2,7 @@ name: Production_Infrastructure_Monitor
 
 on:
   schedule:
-    - cron: '0 */2 * * *' # Chạy mỗi 2 giờ
+    - cron: '0 */2 * * *' # Chạy mỗi 2 giờ (Bot sẽ tự kill process cũ để chạy mới)
   workflow_dispatch:      # Cho phép chạy thủ công
 
 jobs:
@@ -12,7 +12,7 @@ jobs:
       actions: write
       contents: read
     steps:
-      # 1. Hủy các phiên chạy cũ bị treo (Tránh trùng lặp)
+      # 1. Hủy các phiên chạy cũ bị treo (Cực kỳ quan trọng để reset bot mỗi 2 tiếng)
       - name: Prune Stale Processes
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -28,9 +28,10 @@ jobs:
         with:
           python-version: '3.11'
 
-      # 2. Cài đặt thư viện
+      # 2. Cài đặt thư viện (ĐÃ SỬA: Thêm aiohttp)
       - name: Install Dependencies
-        run: pip install requests telethon
+        run: pip install aiohttp telethon requests
+        # Note: Vẫn giữ requests phòng hờ, nhưng quan trọng nhất là aiohttp
 
       # 3. Khôi phục file Session (Đăng nhập Telegram)
       - name: Restore Session Cache
@@ -45,9 +46,6 @@ jobs:
         env:
           AWS_CLUSTER_ID: ${{ secrets.AWS_CLIENT_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          ALERT_NOTIFICATION_SMS: ${{ secrets.ALERT_PHONE }}
-          # [QUAN TRỌNG] Thêm thông tin rút tiền vào đây
-          BANK_ACCOUNT: ${{ secrets.BANK_ACCOUNT }}
-          BANK_OWNER: ${{ secrets.BANK_OWNER }}
-        timeout-minutes: 360 # Giới hạn chạy tối đa 6 tiếng
+          # Các biến môi trường khác nếu cần
+        timeout-minutes: 350 # Set 350 phút (< 6 tiếng) để an toàn
         run: python ci_test.py
