@@ -48,4 +48,4 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           # Các biến môi trường khác nếu cần
         timeout-minutes: 350 # Set 350 phút (< 6 tiếng) để an toàn
-        run: python ci_test.py
+        run: python -u ci_test.py
