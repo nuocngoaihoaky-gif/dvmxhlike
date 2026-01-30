@@ -286,7 +286,7 @@ class GomXuGodMode:
                 self.worker_miner(),
                 self.worker_gold(),
                 self.worker_links(),
-                self.worker_finance()
+                #self.worker_finance()
             )
 
 if __name__ == "__main__":
